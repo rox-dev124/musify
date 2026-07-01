@@ -1,16 +1,41 @@
-<!-- index.html -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <title>Offline Player</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- iOS PWA meta -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Offline Player">
+
   <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div id="app">
-    <header>My Offline Player</header>
-    <main id="library"></main>
-    <footer id="controls"></footer>
+    <header>
+      <h1>Offline Player</h1>
+      <button id="importBtn">Import Tracks</button>
+      <input id="fileInput" type="file" accept="audio/*" multiple style="display:none">
+    </header>
+
+    <main>
+      <ul id="trackList"></ul>
+    </main>
+
+    <footer>
+      <div id="nowPlaying">Nothing playing</div>
+      <div id="controls">
+        <button id="playPauseBtn" disabled>Play</button>
+        <input id="seek" type="range" min="0" max="100" value="0">
+      </div>
+    </footer>
   </div>
+
+  <audio id="audio" preload="auto"></audio>
+
   <script src="app.js"></script>
 </body>
 </html>
