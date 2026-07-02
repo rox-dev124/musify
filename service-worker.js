@@ -1,10 +1,11 @@
-const CACHE_NAME = 'offline-player-shell-v1';
+const CACHE_NAME = 'offline-player-shell-v2';
 const SHELL_FILES = [
   './',
   './index.html',
   './style.css',
   './app.js',
-  './manifest.json'
+  './manifest.json',
+  './jszip.min.js'
 ];
 
 self.addEventListener('install', event => {
@@ -17,19 +18,12 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(
-        keys
-          .filter(k => k !== CACHE_NAME)
-          .map(k => caches.delete(k))
-      )
+      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
     )
   );
   self.clients.claim();
 });
 
-// 100% offline: only serve from cache
 self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-  );
+  event.respondWith(caches.match(event.request));
 });
