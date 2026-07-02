@@ -5,7 +5,6 @@
   <title>Offline Player</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-  <!-- iOS PWA meta -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="Offline Player">
@@ -18,8 +17,11 @@
     <header>
       <h1>Offline Player</h1>
       <div class="header-buttons">
+        <button id="importZipBtn">Import ZIP</button>
         <button id="newAlbumBtn">New Album</button>
         <button id="importBtn">Import Tracks</button>
+
+        <input id="zipInput" type="file" accept=".zip" style="display:none">
         <input id="fileInput" type="file" accept="audio/*" multiple style="display:none">
       </div>
     </header>
@@ -63,6 +65,7 @@
     </div>
   </div>
 
+  <script src="jszip.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
