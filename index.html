@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Offline Player</title>
+  <title>Offline Music Player</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
+  <!-- iPhone PWA -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="Offline Player">
@@ -12,15 +13,19 @@
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
   <div id="app">
+
     <header>
       <h1>Offline Player</h1>
+
       <div class="header-buttons">
         <button id="importZipBtn">Import ZIP</button>
         <button id="newAlbumBtn">New Album</button>
         <button id="importBtn">Import Tracks</button>
 
+        <!-- Hidden inputs -->
         <input id="zipInput" type="file" accept=".zip" style="display:none">
         <input id="fileInput" type="file" accept="audio/*" multiple style="display:none">
       </div>
@@ -45,6 +50,7 @@
         <input id="seek" type="range" min="0" max="100" value="0">
       </div>
     </footer>
+
   </div>
 
   <audio id="audio" preload="auto"></audio>
@@ -53,11 +59,14 @@
   <div id="albumPopup" class="popup">
     <div class="popup-inner">
       <h3>New Album</h3>
+
       <input id="albumNameInput" placeholder="Album name">
+
       <label class="file-label">
         Cover image
         <input id="albumCoverInput" type="file" accept="image/*">
       </label>
+
       <div class="popup-buttons">
         <button id="createAlbumBtn">Create</button>
         <button id="cancelAlbumBtn">Cancel</button>
@@ -65,7 +74,11 @@
     </div>
   </div>
 
+  <!-- Libraries -->
   <script src="jszip.min.js"></script>
+  <script src="jsmediatags.min.js"></script>
+
+  <!-- Main app -->
   <script src="app.js"></script>
 </body>
 </html>
