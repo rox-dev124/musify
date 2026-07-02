@@ -1,4 +1,4 @@
-// --- PWA registration (no network logic) ---
+// --- PWA registration ---
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./service-worker.js');
@@ -7,7 +7,7 @@ if ('serviceWorker' in navigator) {
 
 // --- IndexedDB setup ---
 const DB_NAME = 'offline-music-db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 let db;
 
 function openDB() {
@@ -16,8 +16,19 @@ function openDB() {
 
     req.onupgradeneeded = e => {
       const db = e.target.result;
+
+      if (!db.objectStoreNames.contains('albums')) {
+        db.createObjectStore('albums', { keyPath: 'id', autoIncrement: true });
+      }
+
       if (!db.objectStoreNames.contains('tracks')) {
-        db.createObjectStore('tracks', { keyPath: 'id', autoIncrement: true });
+        const store = db.createObjectStore('tracks', { keyPath: 'id', autoIncrement: true });
+        store.createIndex('albumId', 'albumId', { unique: false });
+      } else {
+        const store = req.transaction.objectStore('tracks');
+        if (!store.indexNames.contains('albumId')) {
+          store.createIndex('albumId', 'albumId', { unique: false });
+        }
       }
     };
 
@@ -30,11 +41,35 @@ function openDB() {
   });
 }
 
-function addTrack(name, arrayBuffer) {
+// --- Albums helpers ---
+function addAlbum(name, coverArrayBuffer) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('albums', 'readwrite');
+    const store = tx.objectStore('albums');
+    const req = store.add({ name, cover: coverArrayBuffer || null });
+
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = e => reject(e.target.error);
+  });
+}
+
+function getAllAlbums() {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('albums', 'readonly');
+    const store = tx.objectStore('albums');
+    const req = store.getAll();
+
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = e => reject(e.target.error);
+  });
+}
+
+// --- Tracks helpers ---
+function addTrack(name, arrayBuffer, albumId) {
   return new Promise((resolve, reject) => {
     const tx = db.transaction('tracks', 'readwrite');
     const store = tx.objectStore('tracks');
-    const req = store.add({ name, data: arrayBuffer });
+    const req = store.add({ name, data: arrayBuffer, albumId: albumId || null });
 
     req.onsuccess = () => resolve(req.result);
     req.onerror = e => reject(e.target.error);
@@ -52,27 +87,91 @@ function getAllTracks() {
   });
 }
 
-// --- UI + audio logic ---
+function getTracksByAlbum(albumId) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('tracks', 'readonly');
+    const store = tx.objectStore('tracks');
+    const index = store.index('albumId');
+    const req = index.getAll(albumId);
+
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = e => reject(e.target.error);
+  });
+}
+
+// --- UI elements ---
 const importBtn = document.getElementById('importBtn');
 const fileInput = document.getElementById('fileInput');
 const trackList = document.getElementById('trackList');
+const albumList = document.getElementById('albumList');
+const tracksTitle = document.getElementById('tracksTitle');
+
 const audio = document.getElementById('audio');
 const nowPlaying = document.getElementById('nowPlaying');
 const playPauseBtn = document.getElementById('playPauseBtn');
 const seek = document.getElementById('seek');
 
+const albumPopup = document.getElementById('albumPopup');
+const albumNameInput = document.getElementById('albumNameInput');
+const albumCoverInput = document.getElementById('albumCoverInput');
+const newAlbumBtn = document.getElementById('newAlbumBtn');
+const createAlbumBtn = document.getElementById('createAlbumBtn');
+const cancelAlbumBtn = document.getElementById('cancelAlbumBtn');
+
 let currentTrack = null;
 let currentBlobUrl = null;
 let isSeeking = false;
+let currentAlbumId = null;
 
+// --- init ---
 async function init() {
   await openDB();
-  const tracks = await getAllTracks();
+  const [albums, tracks] = await Promise.all([getAllAlbums(), getAllTracks()]);
+  renderAlbums(albums);
   renderTrackList(tracks);
 }
 
+// --- render albums ---
+function renderAlbums(albums) {
+  albumList.innerHTML = '';
+
+  albums.forEach(album => {
+    const li = document.createElement('li');
+
+    const left = document.createElement('div');
+    left.className = 'album-left';
+
+    if (album.cover) {
+      const blob = new Blob([album.cover], { type: 'image/*' });
+      const url = URL.createObjectURL(blob);
+      const img = document.createElement('img');
+      img.src = url;
+      img.className = 'albumCover';
+      left.appendChild(img);
+    } else {
+      const img = document.createElement('div');
+      img.className = 'albumCover';
+      left.appendChild(img);
+    }
+
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = album.name;
+    left.appendChild(nameSpan);
+
+    const openBtn = document.createElement('button');
+    openBtn.textContent = 'Open';
+    openBtn.addEventListener('click', () => openAlbum(album.id, album.name));
+
+    li.appendChild(left);
+    li.appendChild(openBtn);
+    albumList.appendChild(li);
+  });
+}
+
+// --- render tracks ---
 function renderTrackList(tracks) {
   trackList.innerHTML = '';
+
   tracks.forEach(track => {
     const li = document.createElement('li');
     const nameSpan = document.createElement('span');
@@ -88,14 +187,21 @@ function renderTrackList(tracks) {
   });
 }
 
+// --- open album ---
+async function openAlbum(albumId, albumName) {
+  currentAlbumId = albumId;
+  tracksTitle.textContent = `Tracks — ${albumName}`;
+  const tracks = await getTracksByAlbum(albumId);
+  renderTrackList(tracks);
+}
+
+// --- play track ---
 async function playTrack(track) {
-  // revoke old URL
   if (currentBlobUrl) {
     URL.revokeObjectURL(currentBlobUrl);
     currentBlobUrl = null;
   }
 
-  // create Blob from ArrayBuffer
   const blob = new Blob([track.data], { type: 'audio/*' });
   const url = URL.createObjectURL(blob);
   currentBlobUrl = url;
@@ -122,10 +228,15 @@ fileInput.addEventListener('change', async e => {
 
   for (const file of files) {
     const arrayBuffer = await file.arrayBuffer();
-    await addTrack(file.name, arrayBuffer);
+    await addTrack(file.name, arrayBuffer, currentAlbumId);
   }
 
-  const tracks = await getAllTracks();
+  let tracks;
+  if (currentAlbumId) {
+    tracks = await getTracksByAlbum(currentAlbumId);
+  } else {
+    tracks = await getAllTracks();
+  }
   renderTrackList(tracks);
   fileInput.value = '';
 });
@@ -162,6 +273,37 @@ seek.addEventListener('change', () => {
 
 audio.addEventListener('ended', () => {
   playPauseBtn.textContent = 'Play';
+});
+
+// --- album popup ---
+newAlbumBtn.addEventListener('click', () => {
+  albumPopup.style.display = 'flex';
+  albumNameInput.value = '';
+  albumCoverInput.value = '';
+});
+
+cancelAlbumBtn.addEventListener('click', () => {
+  albumPopup.style.display = 'none';
+});
+
+createAlbumBtn.addEventListener('click', async () => {
+  const name = albumNameInput.value.trim();
+  if (!name) return;
+
+  let coverFile = albumCoverInput.files[0] || null;
+  let coverArrayBuffer = null;
+
+  if (coverFile) {
+    coverArrayBuffer = await coverFile.arrayBuffer();
+  }
+
+  await openDB();
+  const albumId = await addAlbum(name, coverArrayBuffer);
+
+  const albums = await getAllAlbums();
+  renderAlbums(albums);
+
+  albumPopup.style.display = 'none';
 });
 
 // --- boot ---
