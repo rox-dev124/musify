@@ -17,12 +17,23 @@
   <div id="app">
     <header>
       <h1>Offline Player</h1>
-      <button id="importBtn">Import Tracks</button>
-      <input id="fileInput" type="file" accept="audio/*" multiple style="display:none">
+      <div class="header-buttons">
+        <button id="newAlbumBtn">New Album</button>
+        <button id="importBtn">Import Tracks</button>
+        <input id="fileInput" type="file" accept="audio/*" multiple style="display:none">
+      </div>
     </header>
 
     <main>
-      <ul id="trackList"></ul>
+      <section>
+        <h2>Albums</h2>
+        <ul id="albumList"></ul>
+      </section>
+
+      <section>
+        <h2 id="tracksTitle">Tracks</h2>
+        <ul id="trackList"></ul>
+      </section>
     </main>
 
     <footer>
@@ -35,6 +46,22 @@
   </div>
 
   <audio id="audio" preload="auto"></audio>
+
+  <!-- Album popup -->
+  <div id="albumPopup" class="popup">
+    <div class="popup-inner">
+      <h3>New Album</h3>
+      <input id="albumNameInput" placeholder="Album name">
+      <label class="file-label">
+        Cover image
+        <input id="albumCoverInput" type="file" accept="image/*">
+      </label>
+      <div class="popup-buttons">
+        <button id="createAlbumBtn">Create</button>
+        <button id="cancelAlbumBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>
