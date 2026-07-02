@@ -27,7 +27,7 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// 100% offline: only serve from cache, no network fallback
+// 100% offline: only serve from cache
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
